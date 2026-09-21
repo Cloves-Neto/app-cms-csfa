@@ -23,16 +23,18 @@ export interface ImportSchoolMaterialCsvResponse {
 }
 
 class SchoolMaterialService {
-  constructor(private client: HttpClient = httpClient) {}
+  private client: HttpClient;
+
+  constructor(client: HttpClient = httpClient) {
+    this.client = client;
+  }
 
   async getAll(params?: { academicYear?: number; segment?: string }): Promise<ISchoolMaterial[]> {
-    const response = await this.client.get("/school-materials", { params });
-    return response.data;
+    return this.client.get<ISchoolMaterial[]>("/school-materials", { params });
   }
 
   async create(data: Omit<ISchoolMaterial, "id" | "createdAt" | "isActive">): Promise<ISchoolMaterial> {
-    const response = await this.client.post("/school-materials", data);
-    return response.data;
+    return this.client.post<ISchoolMaterial>("/school-materials", data);
   }
 
   async delete(id: string): Promise<void> {
@@ -43,23 +45,21 @@ class SchoolMaterialService {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await this.client.post<ImportSchoolMaterialCsvResponse>("/school-materials/import-csv", formData, {
+    return this.client.post<ImportSchoolMaterialCsvResponse>("/school-materials/import-csv", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
       // Timeout maior para upload e processamento (30s)
       timeout: 30000,
     });
-
-    return response.data;
   }
 
   async downloadTemplateCsv(): Promise<void> {
-    const response = await this.client.get("/school-materials/template-csv", {
+    const response = await this.client.get<Blob>("/school-materials/template-csv", {
       responseType: "blob",
     });
 
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const url = window.URL.createObjectURL(new Blob([response as any]));
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", "modelo_materiais_csfa.csv");

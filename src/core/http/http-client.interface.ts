@@ -6,6 +6,7 @@ export interface HttpRequestConfig {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   timeout?: number;
+  responseType?: 'arraybuffer' | 'blob' | 'document' | 'json' | 'text' | 'stream';
 }
 
 /**

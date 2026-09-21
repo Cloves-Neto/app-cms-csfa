@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import WrapPages from "@/layouts/WrapPages";
-import { Link } from "react-router-dom";
-import { ClipboardCheck, ArrowLeft, CheckCircle2, RotateCcw, AlertTriangle, Calendar, User, Search } from "lucide-react";
+import { ClipboardCheck, CheckCircle2, RotateCcw, AlertTriangle, Calendar, User, Search } from "lucide-react";
 import { postService } from "@/features/post/services/post.service";
 import type { Post } from "@/features/post/types/post.types";
 
