@@ -6,8 +6,10 @@ import {
   SchoolMaterialImportModal,
   type ISchoolMaterial,
 } from "@/features/schoolMaterial";
-import { Loader2, Trash2, BookOpen, AlertCircle, Search } from "lucide-react";
+import { Trash2, BookOpen, AlertCircle, Search } from "lucide-react";
 import { Button } from "@/components/common/Button";
+import { TableSkeleton } from "@/components/common/Skeleton";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export function Materiais() {
   const [materials, setMaterials] = useState<ISchoolMaterial[]>([]);
@@ -78,25 +80,21 @@ export function Materiais() {
 
             <div className="flex-1 bg-white p-6 rounded-3xl border border-gray-100 shadow-xs flex flex-col min-h-0">
               {isLoading ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                <Loader2 size={32} className="animate-spin mb-4 text-[#44abff]" />
-                <p>Carregando materiais escolares...</p>
-              </div>
-            ) : materials.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-4 border border-gray-100">
-                  <BookOpen size={24} className="text-gray-300" />
+                <div className="pt-2">
+                  <TableSkeleton rows={5} />
                 </div>
-                <h3 className="text-gray-900 font-bold mb-1 text-lg">Nenhum material encontrado</h3>
-                <p className="text-sm">Você ainda não cadastrou nenhuma lista de materiais.</p>
-                <div className="mt-6 flex items-center gap-2">
-                  <Button onClick={() => setIsImportModalOpen(true)} icon={<AlertCircle size={16} />}>
-                    Importar Agora
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
+              ) : materials.length === 0 ? (
+                <EmptyState
+                  title="Nenhum material encontrado!"
+                  description="Você ainda não cadastrou nenhuma lista de materiais."
+                  action={
+                    <Button onClick={() => setIsImportModalOpen(true)} icon={<AlertCircle size={16} />}>
+                      Importar Agora
+                    </Button>
+                  }
+                />
+              ) : (
+                <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100">

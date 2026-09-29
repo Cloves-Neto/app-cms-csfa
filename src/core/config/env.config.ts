@@ -8,8 +8,8 @@ export const envConfig = {
     timeoutMs: Number(import.meta.env.VITE_API_TIMEOUT ?? 15000),
   },
   auth: {
-    tokenStorageKey: import.meta.env.VITE_TOKEN_STORAGE_KEY ?? "token",
-    refreshTokenStorageKey: import.meta.env.VITE_REFRESH_TOKEN_STORAGE_KEY ?? "refreshToken",
+    tokenStorageKey: "token",
+    refreshTokenStorageKey: "refreshToken",
   },
 } as const;
 

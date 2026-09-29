@@ -33,6 +33,7 @@ export function DashboardLayout() {
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [notificationsCount, setNotificationsCount] = useState<number>(3);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
 
   // Monitor screen width for mobile breakpoint (< 900px)
   useEffect(() => {
@@ -53,34 +54,49 @@ export function DashboardLayout() {
   
   useEffect(() => {
     let active = true;
-    let lastChecked = new Date().toISOString();
+    let eventSource: EventSource | null = null;
 
-    const fetchNotifications = async () => {
+    const setupNotifications = async () => {
       const { notificationService } = await import("@/features/notifications/services/notification.service");
+      const { envConfig } = await import("@/core/config/env.config");
+
+      // Initial Fetch
       const res = await notificationService.getMyNotifications();
       if (!active) return;
       
       const unread = res.filter((n) => !n.isRead);
       setNotificationsCount(unread.length);
       
-      // Check for new since last poll
-      const newNotifs = unread.filter(n => n.createdAt > lastChecked);
-      if (newNotifs.length > 0) {
-        setToasts(prev => [...prev, ...newNotifs]);
-        // Update last checked
-        lastChecked = new Date().toISOString();
+      // Setup SSE
+      const token = localStorage.getItem(envConfig.auth.tokenStorageKey);
+      if (token) {
+        eventSource = new EventSource(`${envConfig.api.baseURL}/notifications/stream?token=${token}`);
+        
+        eventSource.onmessage = (event) => {
+          if (!active) return;
+          try {
+            const newNotif: AppNotification = JSON.parse(event.data);
+            setNotificationsCount(prev => prev + 1);
+            setToasts(prev => [...prev, newNotif]);
+          } catch (e) {
+            console.error("SSE Parse error", e);
+          }
+        };
+
+        eventSource.onerror = (e) => {
+          console.error("SSE Error", e);
+          eventSource?.close();
+        };
       }
     };
 
-    // Initial fetch
-    fetchNotifications();
-
-    // Polling every 15s
-    const interval = setInterval(fetchNotifications, 15000);
+    setupNotifications();
     
     return () => {
       active = false;
-      clearInterval(interval);
+      if (eventSource) {
+        eventSource.close();
+      }
     };
   }, [location.pathname]);
 
@@ -355,17 +371,82 @@ export function DashboardLayout() {
                 />
               </div>
 
-              {/* Notification Icon */}
-              <button 
-                onClick={() => navigate("/dashboard/notificacoes")}
-                className="relative w-8.5 h-8.5 rounded-full bg-white border border-gray-200/80 shadow-xs flex items-center justify-center text-[#0f1e36] hover:text-[#44abff] hover:bg-gray-50 transition-colors shrink-0"
-                title="Central de Notificações"
-              >
-                <Bell size={16} />
-                {notificationsCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#44abff] ring-2 ring-white" />
+              {/* Notification Icon & Popover */}
+              <div className="relative">
+                <button 
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  className="relative w-8.5 h-8.5 rounded-full bg-white border border-gray-200/80 shadow-xs flex items-center justify-center text-[#0f1e36] hover:text-[#44abff] hover:bg-gray-50 transition-colors shrink-0"
+                  title="Central de Notificações"
+                >
+                  <Bell size={16} />
+                  {notificationsCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#44abff] ring-2 ring-white" />
+                  )}
+                </button>
+
+                {isNotificationsOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsNotificationsOpen(false)}
+                    />
+                    <div className="absolute top-full right-0 mt-2 w-[320px] sm:w-[380px] md:w-[450px] bg-white rounded-3xl shadow-2xl border border-gray-100 z-50 overflow-hidden flex flex-col animate-in slide-in-from-top-2 fade-in duration-200">
+                      <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                        <h3 className="text-sm font-bold text-[#0f1e36]">Notificações</h3>
+                        {notificationsCount > 0 && (
+                          <span className="text-[10px] font-bold text-[#44abff] bg-[#44abff]/10 px-2 py-0.5 rounded-full">
+                            {notificationsCount} novas
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="overflow-y-auto max-h-[40vh] min-h-[150px] p-2 flex flex-col">
+                        {toasts.length === 0 && notificationsCount === 0 ? (
+                           <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
+                             <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 mb-3">
+                               <Bell size={20} strokeWidth={2} />
+                             </div>
+                             <p className="text-sm font-bold text-gray-600 mb-1">Tudo tranquilo por aqui</p>
+                             <p className="text-xs text-gray-400">Você não possui novas notificações no momento.</p>
+                           </div>
+                        ) : (
+                          <div className="space-y-1">
+                            {toasts.slice().reverse().map(t => (
+                              <div key={t.id} className="p-3 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-gray-100/50 cursor-pointer transition-colors flex gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#0f1e36] text-white flex items-center justify-center shrink-0">
+                                  <Bell size={14} className="text-[#44abff]" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold text-[#0f1e36] truncate">{t.title}</p>
+                                  <p className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">{t.message}</p>
+                                  <p className="text-[9px] font-semibold text-gray-400 mt-1">{new Date(t.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                </div>
+                              </div>
+                            ))}
+                            {toasts.length < notificationsCount && (
+                              <div className="p-3 text-center">
+                                <p className="text-xs text-gray-400">Existem mais notificações não lidas na central.</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 border-t border-gray-50 bg-white">
+                        <button 
+                          onClick={() => {
+                            setIsNotificationsOpen(false);
+                            navigate("/dashboard/notificacoes");
+                          }}
+                          className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 text-[#0f1e36] text-xs font-bold rounded-xl transition-colors"
+                        >
+                          Acessar Central Completa
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
-              </button>
+              </div>
 
               {/* User Icon / Avatar */}
               <button 

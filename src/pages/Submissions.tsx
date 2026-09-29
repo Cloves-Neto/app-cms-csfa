@@ -25,6 +25,8 @@ import {
   type SubmissionStatus,
   type ExtraDataParsed,
 } from "@/features/submissions";
+import { TableSkeleton } from "@/components/common/Skeleton";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export function SubmissionsPage() {
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
@@ -321,17 +323,19 @@ export function SubmissionsPage() {
           {/* Submissions Table / Cards */}
           <div className="flex-1 bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden flex flex-col min-h-0">
             {isLoading ? (
-              <div className="flex-1 flex items-center justify-center p-12 text-xs text-gray-400">
-                Carregando atendimentos e solicitações...
+              <div className="pt-2">
+                <TableSkeleton rows={7} />
               </div>
             ) : submissions.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-gray-400 space-y-2">
-                <Inbox size={32} className="text-gray-300 mx-auto" />
-                <p className="text-xs font-semibold text-gray-500">Nenhuma submissão encontrada.</p>
-                <p className="text-[11px] text-gray-400">
-                  Os formulários preenchidos no portal institucional aparecerão listados aqui em tempo real.
-                </p>
-              </div>
+              <EmptyState
+                icon={
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center text-gray-300 mb-3 border-[3px] border-gray-200">
+                    <Inbox size={24} className="text-gray-300 stroke-[2]" />
+                  </div>
+                }
+                title="Nenhuma submissão encontrada"
+                description="Os formulários preenchidos no portal institucional aparecerão listados aqui em tempo real."
+              />
             ) : (
               <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
                 {submissions.map((item) => {

@@ -6,7 +6,7 @@ export interface AppNotification {
   message: string;
   type: "INFO" | "WARNING" | "SUCCESS" | "DANGER";
   targetUserId?: string | null;
-  targetRole?: string | null;
+  targetRoles?: string[];
   isGlobal?: boolean;
   targetUser?: {
     id: string;
@@ -34,7 +34,7 @@ export interface CreateNotificationDTO {
   message: string;
   type?: "INFO" | "WARNING" | "SUCCESS" | "DANGER";
   targetUserId?: string | null;
-  targetRole?: string | null;
+  targetRoles?: string[];
   isGlobal?: boolean;
   actionUrl?: string;
   attachmentUrl?: string;

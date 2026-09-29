@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import WrapPages from "@/layouts/WrapPages";
-import { ShieldCheck, Activity, Clock, User, ArrowLeft, Search } from "lucide-react";
+import { ShieldCheck, Clock, User, ArrowLeft, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { logService, type AuditLogItem } from "@/features/logs/services/log.service";
+import { TableSkeleton } from "@/components/common/Skeleton";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
@@ -117,18 +119,19 @@ export function AuditLogsPage() {
           {/* Logs List */}
           <div className="flex-1 bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden flex flex-col min-h-0">
             {isLoading ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2 p-12">
-                <Activity className="animate-spin text-[#44abff]" size={24} />
-                <span className="text-xs">Carregando logs do sistema...</span>
+              <div className="pt-2">
+                <TableSkeleton rows={8} />
               </div>
             ) : logs.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-gray-400 space-y-2">
-                <ShieldCheck size={32} className="text-gray-300 mx-auto" />
-                <p className="text-xs font-semibold text-gray-500">Nenhum log encontrado.</p>
-                <p className="text-[11px] text-gray-400">
-                  As ações e eventos do sistema correspondentes aos filtros aparecerão aqui.
-                </p>
-              </div>
+              <EmptyState
+                icon={
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center text-gray-300 mb-3 border-[3px] border-gray-200">
+                    <ShieldCheck size={24} className="text-gray-300 stroke-[2]" />
+                  </div>
+                }
+                title="Nenhum log encontrado!"
+                description="As ações e eventos do sistema correspondentes aos filtros aparecerão aqui."
+              />
             ) : (
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 divide-y divide-gray-100">
                 {logs.map((log) => {

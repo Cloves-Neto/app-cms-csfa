@@ -1,5 +1,6 @@
 import { X, Clock, MapPin, Trash2, Calendar } from "lucide-react";
 import type { SchoolEvent } from "../types/agenda.types";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface DayEventsDrawerProps {
   isOpen: boolean;
@@ -45,10 +46,15 @@ export function DayEventsDrawer({
         {/* Events List */}
         <div className="flex-1 overflow-y-auto py-4 space-y-3">
           {events.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 space-y-2">
-              <Calendar size={32} className="mx-auto text-gray-300" />
-              <p className="text-xs font-medium">Nenhum evento agendado para este dia.</p>
-            </div>
+            <EmptyState
+              icon={
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-gray-300 mb-3 border-[3px] border-gray-200">
+                  <Calendar size={24} className="text-gray-300 stroke-[2]" />
+                </div>
+              }
+              title="Nenhum evento"
+              description="Nenhum evento agendado para este dia."
+            />
           ) : (
             events.map((ev) => (
               <div

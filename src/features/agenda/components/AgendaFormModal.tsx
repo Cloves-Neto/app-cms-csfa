@@ -1,45 +1,82 @@
-import { useState, type FormEvent } from "react";
-import { X, Check, Upload } from "lucide-react";
+import { useState, useEffect, type FormEvent } from "react";
+import { X, Check } from "lucide-react";
 import type { CreateEventInput } from "../types/agenda.types";
+import { agendaService, type EventCategory } from "../services/agenda.service";
 
 interface AgendaFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: CreateEventInput) => Promise<void>;
-  monthName: string;
+  monthName?: string;
+  monthIndex?: number;
+  year?: number;
 }
 
 export function AgendaFormModal({
   isOpen,
   onClose,
   onSave,
-  monthName,
 }: AgendaFormModalProps) {
-  const [tab, setTab] = useState<"create" | "import">("create");
-  const [day, setDay] = useState<number>(18);
+  const [dateStr, setDateStr] = useState<string>("");
   const [time, setTime] = useState("09:30");
   const [title, setTitle] = useState("");
-  const [location, setLocation] = useState("Auditório Principal");
-  const [category, setCategory] = useState("Eventos");
+  const [location, setLocation] = useState("");
+  const [category, setCategory] = useState(""); // optional
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categories, setCategories] = useState<EventCategory[]>([]);
+  const [minDateStr, setMinDateStr] = useState<string>("");
+  const [maxDateStr, setMaxDateStr] = useState<string>("");
+
+  useEffect(() => {
+    if (isOpen) {
+      agendaService.getCategories().then(setCategories);
+      agendaService.getServerTime().then((isoString) => {
+        const today = new Date(isoString);
+        setMinDateStr(today.toISOString().split("T")[0]);
+        
+        // Regra: max date is 6 months ahead
+        const maxDate = new Date(today);
+        maxDate.setMonth(maxDate.getMonth() + 6);
+        setMaxDateStr(maxDate.toISOString().split("T")[0]);
+      });
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!dateStr) return;
+
+    const [y, m, d] = dateStr.split("-").map(Number);
+    
+    // Client-side block for past dates
+    const inputDate = new Date(y, m - 1, d);
+    const todayZero = new Date();
+    todayZero.setHours(0, 0, 0, 0);
+
+    if (inputDate < todayZero) {
+      alert("Não é permitido cadastrar eventos em datas passadas.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onSave({
-        day: Number(day),
+        day: d,
+        month: m - 1,
+        year: y,
         time,
         title,
         location,
-        category,
+        category: category || undefined,
         description,
       });
       setTitle("");
       setDescription("");
+      setDateStr("");
+      setLocation("");
     } finally {
       setIsSubmitting(false);
     }
@@ -52,7 +89,7 @@ export function AgendaFormModal({
         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div>
             <h2 className="text-base font-black text-[#0f1e36]">Novo Evento Escolar</h2>
-            <p className="text-xs text-gray-500">Adicione uma atividade à agenda de {monthName} 2026.</p>
+            <p className="text-xs text-gray-500">Adicione uma atividade à agenda.</p>
           </div>
           <button
             onClick={onClose}
@@ -62,33 +99,8 @@ export function AgendaFormModal({
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="px-6 pt-3 flex border-b border-gray-100 gap-4">
-          <button
-            onClick={() => setTab("create")}
-            className={`pb-3 text-xs font-bold transition-all border-b-2 ${
-              tab === "create"
-                ? "border-[#44abff] text-[#0f1e36]"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            Cadastrar Manualmente
-          </button>
-          <button
-            onClick={() => setTab("import")}
-            className={`pb-3 text-xs font-bold transition-all border-b-2 ${
-              tab === "import"
-                ? "border-[#44abff] text-[#0f1e36]"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            Importar CSV
-          </button>
-        </div>
-
         {/* Body */}
-        {tab === "create" ? (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
                 Título da Atividade / Evento
@@ -106,15 +118,15 @@ export function AgendaFormModal({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Dia ({monthName})
+                  Data
                 </label>
                 <input
-                  type="number"
-                  min={1}
-                  max={31}
+                  type="date"
+                  min={minDateStr}
+                  max={maxDateStr}
                   required
-                  value={day}
-                  onChange={(e) => setDay(Number(e.target.value))}
+                  value={dateStr}
+                  onChange={(e) => setDateStr(e.target.value)}
                   className="w-full bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#44abff]/40 text-sm text-[#0f1e36]"
                 />
               </div>
@@ -144,35 +156,44 @@ export function AgendaFormModal({
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className="w-full bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#44abff]/40 text-sm text-[#0f1e36]"
+                  placeholder="Digite o local do evento"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Categoria
+                  Categoria (Opcional)
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full bg-gray-50 px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#44abff]/40 text-sm text-[#0f1e36]"
                 >
-                  <option value="Eventos">Eventos</option>
-                  <option value="Acadêmico">Acadêmico</option>
-                  <option value="Esportes">Esportes</option>
-                  <option value="Institucional">Institucional</option>
+                  <option value="">Selecione...</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                Descrição / Pauta (Opcional)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Descrição / Pauta (Opcional)
+                </label>
+                <span className={`text-[10px] font-bold ${description.length >= 500 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {description.length} / 500
+                </span>
+              </div>
               <textarea
                 rows={2}
+                maxLength={500}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#44abff]/40 text-xs text-[#0f1e36]"
+                className="w-full bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#44abff]/40 text-xs text-[#0f1e36] resize-none"
                 placeholder="Detalhes sobre a programação..."
               />
             </div>
@@ -195,21 +216,6 @@ export function AgendaFormModal({
               </button>
             </div>
           </form>
-        ) : (
-          <div className="p-6 space-y-4 text-center">
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 hover:border-[#44abff] transition-colors">
-              <Upload size={32} className="mx-auto text-gray-400 mb-2" />
-              <p className="text-xs font-bold text-[#0f1e36]">Importar Planilha de Eventos</p>
-              <p className="text-[11px] text-gray-500 mt-1">Arraste um arquivo .csv ou clique para selecionar.</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-full bg-[#0f1e36] text-white py-2.5 rounded-xl text-xs font-bold"
-            >
-              Fechar
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

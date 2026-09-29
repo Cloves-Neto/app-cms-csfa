@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Search } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 export interface EmptyStateProps {
   icon?: ReactNode;
@@ -9,21 +9,25 @@ export interface EmptyStateProps {
 }
 
 export function EmptyState({
-  icon = <Search size={32} className="text-gray-300 mb-2 stroke-1" />,
+  icon = (
+    <div className="w-12 h-12 rounded-full flex items-center justify-center text-gray-300 mb-3 border-[3px] border-gray-200">
+      <CheckCircle2 size={24} className="text-gray-300 stroke-[3]" />
+    </div>
+  ),
   title = "Nenhum resultado encontrado",
   description = "Não encontramos nenhum item correspondente aos seus critérios de busca ou filtros.",
   action,
 }: EmptyStateProps) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-gray-400 w-full h-full min-h-[120px]">
+    <div className="flex-1 flex flex-col items-center justify-center py-16 px-4 text-center w-full h-full min-h-[200px]">
       {icon}
-      <p className="text-xs font-semibold text-gray-500">{title}</p>
+      <h3 className="text-base font-bold text-[#0f1e36] mb-1">{title}</h3>
       {description && (
-        <p className="text-[11px] text-gray-400 mt-0.5 max-w-[250px] mx-auto leading-tight">
+        <p className="text-sm text-gray-500 font-medium max-w-md mx-auto">
           {description}
         </p>
       )}
-      {action && <div className="mt-3">{action}</div>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

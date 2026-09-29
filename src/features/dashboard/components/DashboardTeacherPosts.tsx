@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { FileEdit, Plus, Clock, AlertTriangle, CheckCircle, Send } from "lucide-react";
 import { postService } from "@/features/post/services/post.service";
 import type { Post } from "@/features/post/types/post.types";
+import { TableSkeleton } from "@/components/common/Skeleton";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export function DashboardTeacherPosts() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -93,14 +95,14 @@ export function DashboardTeacherPosts() {
       {/* List */}
       <div className="flex-1 overflow-y-auto divide-y divide-gray-50 pt-1 space-y-2">
         {isLoading ? (
-          <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
-            <Clock className="animate-spin text-[#44abff]" size={20} />
-            <span className="text-xs">Carregando suas postagens...</span>
+          <div className="pt-2">
+            <TableSkeleton rows={4} />
           </div>
         ) : filteredPosts.length === 0 ? (
-          <div className="py-8 text-center text-xs text-gray-400">
-            Nenhuma postagem encontrada nesta categoria.
-          </div>
+          <EmptyState
+            title="Nenhuma postagem"
+            description="Nenhuma postagem encontrada nesta categoria."
+          />
         ) : (
           filteredPosts.map((post) => {
             const isReturned = post.status === "RETURNED";

@@ -4,3 +4,4 @@ export { CalendarMonthView } from "./CalendarMonthView";
 export { DayEventsDrawer } from "./DayEventsDrawer";
 export { AgendaFormModal } from "./AgendaFormModal";
 export { AgendaImportModal } from "./AgendaImportModal";
+export { AgendaSkeleton } from "./AgendaSkeleton";

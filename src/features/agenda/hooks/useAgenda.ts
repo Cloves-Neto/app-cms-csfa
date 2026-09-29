@@ -14,8 +14,11 @@ interface UseAgendaOptions {
 
 export function useAgenda(options: UseAgendaOptions = {}) {
   const service = options.service ?? agendaService;
-  const [currentMonthIndex, setCurrentMonthIndex] = useState<number>(options.initialMonthIndex ?? 8); // 8 = Setembro
-  const [selectedDay, setSelectedDay] = useState<number | null>(18);
+  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
+  const [currentMonthIndex, setCurrentMonthIndex] = useState<number>(
+    options.initialMonthIndex ?? new Date().getMonth()
+  );
+  const [selectedDay, setSelectedDay] = useState<number | null>(new Date().getDate());
   const [events, setEvents] = useState<Record<number, SchoolEvent[]>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -26,12 +29,14 @@ export function useAgenda(options: UseAgendaOptions = {}) {
   const loadEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await service.getEventsByMonth(currentMonthIndex);
+      // In a real API, we should pass currentYear as well.
+      // Assuming getEventsByMonth handles it or just returns events for that month.
+      const data = await service.getEventsByMonth(currentYear, currentMonthIndex);
       setEvents(data);
     } finally {
       setIsLoading(false);
     }
-  }, [service, currentMonthIndex]);
+  }, [service, currentMonthIndex, currentYear]);
 
   useEffect(() => {
     loadEvents();
@@ -48,22 +53,46 @@ export function useAgenda(options: UseAgendaOptions = {}) {
     };
   }, [events]);
 
-  // Grade de 30 dias para Setembro (1º cai na terça-feira)
+  // Grade de dias dinâmica
   const calendarDays: CalendarDay[] = useMemo(() => {
-    return [
-      { dayNum: 30, isCurrentMonth: false, hasEvent: false },
-      { dayNum: 31, isCurrentMonth: false, hasEvent: false },
-      ...Array.from({ length: 30 }, (_, i) => ({
-        dayNum: i + 1,
+    const firstDay = new Date(currentYear, currentMonthIndex, 1).getDay(); // 0 (Dom) a 6 (Sáb)
+    const daysInMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
+    const daysInPrevMonth = new Date(currentYear, currentMonthIndex, 0).getDate();
+    
+    const days: CalendarDay[] = [];
+
+    // Dias do mês anterior
+    for (let i = 0; i < firstDay; i++) {
+      days.push({
+        dayNum: daysInPrevMonth - firstDay + i + 1,
+        isCurrentMonth: false,
+        hasEvent: false,
+      });
+    }
+
+    // Dias do mês atual
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        dayNum: i,
         isCurrentMonth: true,
-        hasEvent: Boolean(events[i + 1]?.length),
-        eventsCount: events[i + 1]?.length || 0,
-      })),
-      { dayNum: 1, isCurrentMonth: false, hasEvent: false },
-      { dayNum: 2, isCurrentMonth: false, hasEvent: false },
-      { dayNum: 3, isCurrentMonth: false, hasEvent: false },
-    ];
-  }, [events]);
+        hasEvent: Boolean(events[i]?.length),
+        eventsCount: events[i]?.length || 0,
+      });
+    }
+
+    // Dias do próximo mês (para completar 35 ou 42 dias, normalmente múltiplos de 7)
+    const totalSlots = days.length > 35 ? 42 : 35;
+    const nextMonthDays = totalSlots - days.length;
+    for (let i = 1; i <= nextMonthDays; i++) {
+      days.push({
+        dayNum: i,
+        isCurrentMonth: false,
+        hasEvent: false,
+      });
+    }
+
+    return days;
+  }, [currentYear, currentMonthIndex, events]);
 
   const selectedDayEvents = selectedDay ? events[selectedDay] || [] : [];
 
@@ -74,12 +103,38 @@ export function useAgenda(options: UseAgendaOptions = {}) {
   }, []);
 
   const handlePrevMonth = useCallback(() => {
-    setCurrentMonthIndex((prev) => (prev > 0 ? prev - 1 : 11));
-  }, []);
+    const now = new Date();
+    const currentAbsoluteMonth = currentYear * 12 + currentMonthIndex;
+    const nowAbsoluteMonth = now.getFullYear() * 12 + now.getMonth();
+
+    if (currentAbsoluteMonth <= nowAbsoluteMonth) {
+      return; // Bloqueia navegação para o passado
+    }
+
+    if (currentMonthIndex > 0) {
+      setCurrentMonthIndex(currentMonthIndex - 1);
+    } else {
+      setCurrentMonthIndex(11);
+      setCurrentYear(currentYear - 1);
+    }
+  }, [currentYear, currentMonthIndex]);
 
   const handleNextMonth = useCallback(() => {
-    setCurrentMonthIndex((prev) => (prev < 11 ? prev + 1 : 0));
-  }, []);
+    const now = new Date();
+    const currentAbsoluteMonth = currentYear * 12 + currentMonthIndex;
+    const nowAbsoluteMonth = now.getFullYear() * 12 + now.getMonth();
+
+    if (currentAbsoluteMonth >= nowAbsoluteMonth + 12) {
+      return; // Bloqueia navegação além de 12 meses
+    }
+
+    if (currentMonthIndex < 11) {
+      setCurrentMonthIndex(currentMonthIndex + 1);
+    } else {
+      setCurrentMonthIndex(0);
+      setCurrentYear(currentYear + 1);
+    }
+  }, [currentYear, currentMonthIndex]);
 
   const handleCreateEvent = useCallback(
     async (input: CreateEventInput) => {
@@ -111,6 +166,7 @@ export function useAgenda(options: UseAgendaOptions = {}) {
   );
 
   return {
+    currentYear,
     currentMonthIndex,
     currentMonthName: MONTH_NAMES[currentMonthIndex],
     selectedDay,

@@ -40,8 +40,18 @@ export class DashboardService {
 
       const groupsMap: Record<string, DashboardEventGroup> = {};
 
+      const now = new Date();
+      now.setHours(0, 0, 0, 0); // Considera hoje como futuro
+      const maxDate = new Date(now.getFullYear(), now.getMonth() + 12, now.getDate());
+
       list.forEach((e: any) => {
         const dateObj = new Date(e.date || e.startDate);
+        
+        // Ignora eventos passados e eventos além de 12 meses
+        if (dateObj < now || dateObj > maxDate) {
+          return;
+        }
+
         const dateKey = dateObj.toISOString().split("T")[0];
         const dayNumber = dateObj.getDate().toString().padStart(2, "0");
         const monthShort = dateObj.toLocaleDateString("pt-BR", { month: "short" }).toUpperCase().replace(".", "");

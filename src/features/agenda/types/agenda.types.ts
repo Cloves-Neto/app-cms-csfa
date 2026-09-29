@@ -18,9 +18,10 @@ export interface CreateEventInput {
   day: number;
   time: string;
   location: string;
-  category: string;
+  category?: string;
   description?: string;
-  monthIndex?: number;
+  month: number;
+  year: number;
 }
 
 export interface CalendarDay {

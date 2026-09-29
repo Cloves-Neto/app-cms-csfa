@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FileText, ArrowRight, CheckCircle, RotateCcw, Clock, AlertCircle } from "lucide-react";
+import { FileText, ArrowRight, CheckCircle, RotateCcw, AlertCircle } from "lucide-react";
 import { postService } from "@/features/post/services/post.service";
 import type { Post } from "@/features/post/types/post.types";
 import { EmptyState } from "@/components/common/EmptyState";
+import { TableSkeleton } from "@/components/common/Skeleton";
 
 export function DashboardReviewQueue() {
   const [queue, setQueue] = useState<Post[]>([]);
@@ -88,15 +89,13 @@ export function DashboardReviewQueue() {
       {/* List */}
       <div className="flex-1 overflow-y-auto divide-y divide-gray-50 pt-2 space-y-2">
         {isLoading ? (
-          <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
-            <Clock className="animate-spin text-purple-500" size={20} />
-            <span className="text-xs">Carregando fila de revisão...</span>
+          <div className="pt-2">
+            <TableSkeleton rows={3} />
           </div>
         ) : queue.length === 0 ? (
           <EmptyState
-            icon={<FileText size={32} className="text-gray-300 mb-2 stroke-1" />}
-            title="Fila de revisão vazia"
-            description="Nenhuma postagem aguardando revisão no momento. Tudo em dia! ✨"
+            title="Nenhuma matéria aguardando revisão!"
+            description="Todas as matérias submetidas pelos professores foram avaliadas e publicadas."
           />
         ) : (
           queue.map((item) => (

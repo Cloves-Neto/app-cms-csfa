@@ -16,6 +16,6 @@ export const config = {
     baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000",
   },
   auth: {
-    tokenStorageKey: import.meta.env.VITE_TOKEN_STORAGE_KEY ?? "token",
+    tokenStorageKey: "token",
   },
 } as const;

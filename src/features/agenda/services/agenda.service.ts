@@ -13,11 +13,36 @@ export interface ImportCsvResponse {
   };
 }
 
+export interface EventCategory {
+  id: string;
+  label: string;
+}
+
 export class AgendaService {
   private readonly client: HttpClient;
 
   constructor(client: HttpClient = httpClient) {
     this.client = client;
+  }
+
+  async getCategories(): Promise<EventCategory[]> {
+    try {
+      const res = await this.client.get<{ data: EventCategory[] }>("/agenda/categories");
+      return res.data || [];
+    } catch (e) {
+      console.error("Erro ao buscar categorias:", e);
+      return [];
+    }
+  }
+
+  async getServerTime(): Promise<string> {
+    try {
+      const res = await this.client.get<{ data: string }>("/agenda/server-time");
+      return res.data;
+    } catch (e) {
+      console.error("Erro ao buscar horário do servidor:", e);
+      return new Date().toISOString(); // fallback
+    }
   }
 
   private mapCategory(type: string): "Acadêmico" | "Eventos" | "Institucional" | "Esportes" {
@@ -36,16 +61,26 @@ export class AgendaService {
     return map[type] || "Eventos";
   }
 
-  async getEventsByMonth(monthIndex: number): Promise<Record<number, SchoolEvent[]>> {
+  async getEventsByMonth(year: number, monthIndex: number): Promise<Record<number, SchoolEvent[]>> {
     try {
-      const res = await this.client.get<any>(`/agenda?month=${monthIndex + 1}`);
+      const res = await this.client.get<any>(`/agenda?month=${monthIndex + 1}&year=${year}`);
       const list = Array.isArray(res) ? res : res.data || [];
       const grouped: Record<number, SchoolEvent[]> = {};
 
       if (Array.isArray(list) && list.length > 0) {
         list.forEach((e: any) => {
-          const date = new Date(e.date || e.startDate);
-          const day = date.getUTCDate ? date.getUTCDate() : date.getDate();
+          // Ajuste de parse da data com fuso se necessário
+          const dateStr = e.date || e.startDate;
+          const date = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T12:00:00Z");
+          
+          const evtMonth = date.getMonth();
+          const evtYear = date.getFullYear();
+          const day = date.getDate();
+
+          if (evtMonth !== monthIndex || evtYear !== year) {
+            return;
+          }
+
           const time = e.time || `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
 
           const item: SchoolEvent = {
@@ -71,23 +106,14 @@ export class AgendaService {
   }
 
   async createEvent(input: CreateEventInput): Promise<SchoolEvent> {
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth();
-    const date = new Date(Date.UTC(currentYear, currentMonth, input.day, 12, 0, 0));
-
-    const typeMap: Record<string, string> = {
-      "Acadêmico": "ACADEMICO",
-      "Eventos": "EVENTO",
-      "Esportes": "ESPORTIVO",
-      "Institucional": "REUNIAO",
-    };
+    const date = new Date(input.year, input.month, input.day, 12, 0, 0);
 
     const payload = {
       title: input.title,
       description: input.description,
       location: input.location || "CSFA",
       time: input.time || "08:00",
-      type: typeMap[input.category] || "EVENTO",
+      type: input.category || "EVENTO",
       date: date.toISOString(),
       status: "CONFIRMADO",
     };
@@ -100,7 +126,7 @@ export class AgendaService {
       title: created.title || input.title,
       time: created.time || input.time,
       location: created.location || input.location,
-      category: input.category,
+      category: input.category || "EVENTO",
       description: created.description || input.description,
       day: input.day,
     };

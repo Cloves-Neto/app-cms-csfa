@@ -9,6 +9,7 @@ import {
   DayEventsDrawer,
   AgendaFormModal,
   AgendaImportModal,
+  AgendaSkeleton
 } from "@/features/agenda";
 
 /**
@@ -19,11 +20,14 @@ export function Agenda() {
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
 
   const {
+    currentYear,
+    currentMonthIndex,
     currentMonthName,
     selectedDay,
     selectedDayEvents,
     calendarDays,
     stats,
+    isLoading,
     isEventDrawerOpen,
     isManageModalOpen,
     setIsEventDrawerOpen,
@@ -61,14 +65,29 @@ export function Agenda() {
         actions={<AgendaStatsCards stats={stats} />}
         content={
           <div className="w-full h-full bg-white p-4 sm:p-6 rounded-3xl border border-gray-200/80 shadow-xs flex flex-col justify-between overflow-hidden">
-            <CalendarMonthView
-              currentMonthName={currentMonthName}
-              calendarDays={calendarDays}
-              selectedDay={selectedDay}
-              onDayClick={handleDayClick}
-              onPrevMonth={handlePrevMonth}
-              onNextMonth={handleNextMonth}
-            />
+            {isLoading ? (
+              <AgendaSkeleton />
+            ) : Object.values(calendarDays).every(d => !d.hasEvent && d.isCurrentMonth) ? (
+               <CalendarMonthView
+                 currentMonthName={currentMonthName}
+                 year={currentYear}
+                 calendarDays={calendarDays}
+                 selectedDay={selectedDay}
+                 onDayClick={handleDayClick}
+                 onPrevMonth={handlePrevMonth}
+                 onNextMonth={handleNextMonth}
+               />
+            ) : (
+              <CalendarMonthView
+                currentMonthName={currentMonthName}
+                year={currentYear}
+                calendarDays={calendarDays}
+                selectedDay={selectedDay}
+                onDayClick={handleDayClick}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+              />
+            )}
           </div>
         }
       />
@@ -89,6 +108,8 @@ export function Agenda() {
         onClose={() => setIsManageModalOpen(false)}
         onSave={handleCreateEvent}
         monthName={currentMonthName}
+        monthIndex={currentMonthIndex}
+        year={currentYear}
       />
 
       {/* Modal de Importação de Arquivo CSV (até 150MB) */}
